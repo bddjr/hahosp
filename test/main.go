@@ -15,14 +15,15 @@ import (
 
 func main() {
 	srv := &http.Server{
-		Addr:              ":5688",
-		Handler:           http.HandlerFunc(handler),
-		ReadHeaderTimeout: 10 * time.Second,
+		Addr:    ":5688",
+		Handler: http.HandlerFunc(handler),
+		// ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	fmt.Println()
 	fmt.Println("  curl -v -k http://localhost" + srv.Addr)
 	fmt.Println("  curl -v -k https://localhost" + srv.Addr)
+	fmt.Println("  telnet localhost", srv.Addr[1:])
 	fmt.Println()
 
 	go func() {
