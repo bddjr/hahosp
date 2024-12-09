@@ -3,6 +3,7 @@ package hahosp
 import (
 	"crypto/tls"
 	"net"
+	"unsafe"
 )
 
 type VisualListener struct {
@@ -72,17 +73,36 @@ func (vl *VisualListener) serve(c net.Conn) {
 	}
 
 	crb := &ConnReadBuffer{
-		Conn:   c,
-		higher: nil,
-		buf:    b[0],
+		Conn: c,
+		buf:  b[0],
 	}
 
-	crb.higher = &Conn{crb}
-	c = crb.higher
+	switch b[0] {
+	case 20, // recordTypeChangeCipherSpec
+		21,   // recordTypeAlert
+		22,   // recordTypeHandshake
+		23,   // recordTypeApplicationData
+		0x80: // error: unsupported SSLv2 handshake received
+		// TLS
+		tc := tls.Server(crb, vl.TLSConf)
+		c = tc
+		crb.higher = (*Conn)(unsafe.Pointer(tc))
 
-	if crb.buf < 'A' || crb.buf > 'Z' {
-		// HTTPS
-		c = tls.Server(c, vl.TLSConf)
+	case 'G', // GET
+		'H', // HEAD
+		'P', // POST PUT PATCH
+		'O', // OPTIONS
+		'D', // DELETE
+		'C', // CONNECT
+		'T': // TRACE
+		// HTTP
+		crb.higher = &Conn{crb}
+		c = crb.higher
+
+	default:
+		// unknown
+		c.Close()
+		return
 	}
 
 	<-vl.nextChan
