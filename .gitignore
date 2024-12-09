@@ -1,0 +1,6 @@
+test/*.exe
+test/main
+test/test
+simplehlfhr/test/*.exe
+simplehlfhr/test/main
+simplehlfhr/test/test
