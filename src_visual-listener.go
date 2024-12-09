@@ -2,21 +2,26 @@ package hahosp
 
 import (
 	"crypto/tls"
+	"log"
 	"net"
+	"net/http"
+	"runtime"
 	"unsafe"
 )
 
 type VisualListener struct {
 	net.Listener
 	TLSConf    *tls.Config
+	Server     *http.Server
 	nextChan   chan struct{}
 	acceptChan chan any
 }
 
-func NewVisualListener(l net.Listener, config *tls.Config) *VisualListener {
+func NewVisualListener(l net.Listener, config *tls.Config, srv *http.Server) *VisualListener {
 	return &VisualListener{
 		Listener:   l,
 		TLSConf:    config,
+		Server:     srv,
 		nextChan:   make(chan struct{}, 1),
 		acceptChan: make(chan any, 1),
 	}
@@ -25,10 +30,16 @@ func NewVisualListener(l net.Listener, config *tls.Config) *VisualListener {
 func (vl *VisualListener) Accept() (net.Conn, error) {
 	vl.nextChan <- struct{}{}
 	c := <-vl.acceptChan
+
 	if conn, ok := c.(net.Conn); ok {
 		return conn, nil
 	}
-	err := c.(error)
+
+	err, ok := c.(error)
+	if !ok {
+		vl.Listener.Close()
+		err = net.ErrClosed
+	}
 	if err == net.ErrClosed {
 		close(vl.acceptChan)
 	}
@@ -54,7 +65,25 @@ func (vl *VisualListener) Serve() {
 	}
 }
 
+func (vl *VisualListener) logf(format string, v ...any) {
+	if vl.Server != nil && vl.Server.ErrorLog != nil {
+		vl.Server.ErrorLog.Printf(format, v...)
+	} else {
+		log.Printf(format, v...)
+	}
+}
+
 func (vl *VisualListener) serve(c net.Conn) {
+	defer func() {
+		// catch panic
+		if err := recover(); err != nil {
+			const size = 64 << 10
+			buf := make([]byte, size)
+			buf = buf[:runtime.Stack(buf, false)]
+			vl.logf("hahosp: panic serving %s: %v\n%s", c.RemoteAddr(), err, buf)
+		}
+	}()
+
 	b := make([]byte, 1)
 	for {
 		n, err := c.Read(b)

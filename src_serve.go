@@ -48,7 +48,7 @@ func Serve(l net.Listener, srv *http.Server, certFile string, keyFile string) er
 		}
 	}
 
-	vl := NewVisualListener(l, config)
+	vl := NewVisualListener(l, config, srv)
 	go vl.Serve()
 	return srv.Serve(vl)
 }
