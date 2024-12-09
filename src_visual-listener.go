@@ -37,6 +37,7 @@ func (vl *VisualListener) Accept() (net.Conn, error) {
 
 	err, ok := c.(error)
 	if !ok {
+		vl.logf("hahosp: accept error: unknown channel, closing listener")
 		vl.Listener.Close()
 		err = net.ErrClosed
 	}
