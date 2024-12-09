@@ -13,8 +13,12 @@ func ListenAndServe(srv *http.Server, certFile string, keyFile string) error {
 	if IsShuttingDown(srv) {
 		return http.ErrServerClosed
 	}
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":https"
+	}
 
-	l, err := net.Listen("tcp", ":5678")
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
