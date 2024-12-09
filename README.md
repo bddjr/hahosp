@@ -1,5 +1,7 @@
 # HTTPS And HTTP On Same Port
 
+Listen HTTPS and HTTP on same port.
+
 > [!IMPORTANT]
 > If you only need redirect to HTTPS, please use https://github.com/bddjr/hlfhr
 
