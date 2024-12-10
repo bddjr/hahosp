@@ -4,6 +4,6 @@ import (
 	"net"
 )
 
-type Conn struct {
+type conn struct {
 	net.Conn
 }

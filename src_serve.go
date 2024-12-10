@@ -22,6 +22,7 @@ func ListenAndServe(srv *http.Server, certFile string, keyFile string) error {
 	if err != nil {
 		return err
 	}
+	defer l.Close()
 
 	return Serve(l, srv, certFile, keyFile)
 }
@@ -48,8 +49,7 @@ func Serve(l net.Listener, srv *http.Server, certFile string, keyFile string) er
 		}
 	}
 
-	vl := NewVisualListener(l, config, srv)
-	go vl.Serve()
+	vl := NewVisualListener(l, config, srv.ErrorLog)
 	return srv.Serve(vl)
 }
 

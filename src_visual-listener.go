@@ -1,80 +1,81 @@
 package hahosp
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net"
-	"net/http"
 	"runtime"
 	"unsafe"
 )
 
 type VisualListener struct {
 	net.Listener
-	TLSConf    *tls.Config
-	Server     *http.Server
+	TLSConf  *tls.Config
+	ErrorLog *log.Logger
+
 	nextChan   chan struct{}
-	acceptChan chan any
+	acceptChan chan net.Conn
+	context    context.Context
+	cancel     context.CancelFunc
+	closed     bool
+	started    bool
 }
 
-func NewVisualListener(l net.Listener, config *tls.Config, srv *http.Server) *VisualListener {
+func NewVisualListener(l net.Listener, config *tls.Config, ErrorLog *log.Logger) *VisualListener {
 	return &VisualListener{
-		Listener:   l,
-		TLSConf:    config,
-		Server:     srv,
-		nextChan:   make(chan struct{}, 1),
-		acceptChan: make(chan any, 1),
+		Listener: l,
+		TLSConf:  config,
+		ErrorLog: ErrorLog,
 	}
+}
+
+func (vl *VisualListener) Close() error {
+	vl.closed = true
+	return vl.Listener.Close()
 }
 
 func (vl *VisualListener) Accept() (net.Conn, error) {
+	if vl.closed {
+		return nil, net.ErrClosed
+	}
+	if !vl.started {
+		vl.started = true
+		vl.context, vl.cancel = context.WithCancel(context.TODO())
+		vl.nextChan = make(chan struct{}, 1)
+		vl.acceptChan = make(chan net.Conn, 1)
+		go vl.serve()
+	}
+
 	vl.nextChan <- struct{}{}
-	c := <-vl.acceptChan
-
-	if conn, ok := c.(net.Conn); ok {
-		return conn, nil
+	select {
+	case <-vl.context.Done():
+		return nil, net.ErrClosed
+	case c := <-vl.acceptChan:
+		return c, nil
 	}
-
-	err, ok := c.(error)
-	if !ok {
-		vl.logf("hahosp: accept error: unknown channel, closing listener")
-		vl.Listener.Close()
-		err = net.ErrClosed
-	}
-	if err == net.ErrClosed {
-		close(vl.acceptChan)
-	}
-	return nil, err
 }
 
-func (vl *VisualListener) Serve() {
+func (vl *VisualListener) serve() {
 	for {
 		c, err := vl.Listener.Accept()
 		if err != nil {
-			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				<-vl.nextChan
-				vl.acceptChan <- err
-				continue
-			}
-			vl.Listener.Close()
-			<-vl.nextChan
-			vl.acceptChan <- net.ErrClosed
-			close(vl.nextChan)
+			vl.cancel()
 			return
 		}
-		go vl.serve(c)
+		go vl.conn(c)
 	}
 }
 
 func (vl *VisualListener) logf(format string, v ...any) {
-	if vl.Server != nil && vl.Server.ErrorLog != nil {
-		vl.Server.ErrorLog.Printf(format, v...)
+	if vl.ErrorLog != nil {
+		vl.ErrorLog.Printf(format, v...)
 	} else {
 		log.Printf(format, v...)
 	}
 }
 
-func (vl *VisualListener) serve(c net.Conn) {
+func (vl *VisualListener) conn(c net.Conn) {
 	defer func() {
 		// catch panic
 		if err := recover(); err != nil {
@@ -85,29 +86,26 @@ func (vl *VisualListener) serve(c net.Conn) {
 		}
 	}()
 
-	b := make([]byte, 1)
+	crb := &connReadBuffer{
+		Conn: c,
+		buf:  make([]byte, 576),
+	}
+
 	for {
-		n, err := c.Read(b)
+		n, err := c.Read(crb.buf)
 		if err != nil {
 			c.Close()
-			<-vl.nextChan
-			vl.acceptChan <- &ConnReadError{
-				Conn: c,
-				err:  err,
-			}
 			return
 		}
-		if n == 1 {
+		if n != 0 {
+			if n != len(crb.buf) {
+				crb.buf = crb.buf[:n]
+			}
 			break
 		}
 	}
 
-	crb := &ConnReadBuffer{
-		Conn: c,
-		buf:  b[0],
-	}
-
-	switch b[0] {
+	switch crb.buf[0] {
 	case 20, // recordTypeChangeCipherSpec
 		21,   // recordTypeAlert
 		22,   // recordTypeHandshake
@@ -116,7 +114,7 @@ func (vl *VisualListener) serve(c net.Conn) {
 		// TLS
 		tc := tls.Server(crb, vl.TLSConf)
 		c = tc
-		crb.higher = (*Conn)(unsafe.Pointer(tc))
+		crb.higher = (*conn)(unsafe.Pointer(tc))
 
 	case 'G', // GET
 		'H', // HEAD
@@ -126,7 +124,7 @@ func (vl *VisualListener) serve(c net.Conn) {
 		'C', // CONNECT
 		'T': // TRACE
 		// HTTP
-		crb.higher = &Conn{crb}
+		crb.higher = &conn{crb}
 		c = crb.higher
 
 	default:
@@ -135,6 +133,10 @@ func (vl *VisualListener) serve(c net.Conn) {
 		return
 	}
 
-	<-vl.nextChan
-	vl.acceptChan <- c
+	select {
+	case <-vl.context.Done():
+		//
+	case <-vl.nextChan:
+		vl.acceptChan <- c
+	}
 }
