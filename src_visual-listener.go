@@ -56,6 +56,7 @@ func (vl *VisualListener) serve() {
 	for {
 		c, err := vl.Listener.Accept()
 		if err != nil {
+			vl.closed = true
 			vl.cancel()
 			return
 		}
