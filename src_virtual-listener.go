@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-type VisualListener struct {
+type VirtualListener struct {
 	net.Listener
 	TLSConf *tls.Config
 
@@ -19,19 +19,19 @@ type VisualListener struct {
 	started    bool
 }
 
-func NewVisualListener(l net.Listener, config *tls.Config) *VisualListener {
-	return &VisualListener{
+func NewVisualListener(l net.Listener, config *tls.Config) *VirtualListener {
+	return &VirtualListener{
 		Listener: l,
 		TLSConf:  config,
 	}
 }
 
-func (vl *VisualListener) Close() error {
+func (vl *VirtualListener) Close() error {
 	vl.closed = true
 	return vl.Listener.Close()
 }
 
-func (vl *VisualListener) Accept() (net.Conn, error) {
+func (vl *VirtualListener) Accept() (net.Conn, error) {
 	if vl.closed {
 		return nil, net.ErrClosed
 	}
@@ -52,7 +52,7 @@ func (vl *VisualListener) Accept() (net.Conn, error) {
 	}
 }
 
-func (vl *VisualListener) serve() {
+func (vl *VirtualListener) serve() {
 	for {
 		c, err := vl.Listener.Accept()
 		if err != nil {
@@ -64,7 +64,7 @@ func (vl *VisualListener) serve() {
 	}
 }
 
-func (vl *VisualListener) conn(c net.Conn) {
+func (vl *VirtualListener) conn(c net.Conn) {
 	crb := &connReadBuffer{
 		Conn: c,
 		buf:  make([]byte, 576),
