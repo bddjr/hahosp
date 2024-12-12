@@ -38,17 +38,17 @@ err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
 
 ```mermaid
 flowchart TD
-	VisualListener("Hijacking net.Listener")
-    VisualAccept("🔄📥Visual accept")
+	VirtualListener("Hijacking net.Listener")
+    VirtualAccept("🔄📥Virtual accept")
     Accept("🔄 Accept")
     Serve(["✅ serve..."])
 	LooksLike{{"Read first byte looks like ?"}}
 	Close(["❌ Close."])
-    SentToVA(["✅📤Send to Visual accept"])
+    SentToVA(["✅📤Send to Virtual accept"])
     NewTLS("New tls.Conn")
 
-    VisualListener -- "http.Server Serve" --> VisualAccept -- "async" --> Serve
-    VisualListener -- "async hahosp Serve" --> Accept -- "async"  --> LooksLike
+    VirtualListener -- "http.Server Serve" --> VirtualAccept -- "async" --> Serve
+    VirtualListener -- "async hahosp Serve" --> Accept -- "async"  --> LooksLike
     LooksLike -- "❓Unknown" --> Close
     LooksLike -- "📄HTTP" --> SentToVA
     LooksLike -- "🔐TLS" --> NewTLS --> SentToVA
