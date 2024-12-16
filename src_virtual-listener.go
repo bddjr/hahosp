@@ -85,11 +85,7 @@ func (vl *VirtualListener) conn(c net.Conn) {
 	}
 
 	switch crb.buf[0] {
-	case 20, // recordTypeChangeCipherSpec
-		21,   // recordTypeAlert
-		22,   // recordTypeHandshake
-		23,   // recordTypeApplicationData
-		0x80: // error: unsupported SSLv2 handshake received
+	case 22: // recordTypeHandshake
 		// TLS
 		tc := tls.Server(crb, vl.TLSConf)
 		c = tc
