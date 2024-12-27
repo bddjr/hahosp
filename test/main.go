@@ -15,9 +15,9 @@ import (
 
 func main() {
 	srv := &http.Server{
-		Addr:    ":5688",
-		Handler: http.HandlerFunc(handler),
-		// ReadHeaderTimeout: 10 * time.Second,
+		Addr:              ":5688",
+		Handler:           http.HandlerFunc(handler),
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	fmt.Println()

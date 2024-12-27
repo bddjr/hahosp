@@ -3,21 +3,25 @@ package hahosp
 import (
 	"crypto/tls"
 	"net"
+	"net/http"
+	"time"
 	"unsafe"
 )
 
 type VirtualListener struct {
 	net.Listener
 	TLSConf *tls.Config
+	Server  *http.Server
 
 	acceptChan chan net.Conn
 	closeChan  chan struct{}
 }
 
-func NewVisualListener(l net.Listener, config *tls.Config) *VirtualListener {
+func NewVisualListener(l net.Listener, config *tls.Config, Server *http.Server) *VirtualListener {
 	return &VirtualListener{
 		Listener: l,
 		TLSConf:  config,
+		Server:   Server,
 	}
 }
 
@@ -60,6 +64,12 @@ func (vl *VirtualListener) conn(c net.Conn) {
 		buf:  make([]byte, 576),
 	}
 
+	if vl.Server.ReadHeaderTimeout != 0 {
+		c.SetReadDeadline(time.Now().Add(vl.Server.ReadHeaderTimeout))
+	} else if vl.Server.ReadTimeout != 0 {
+		c.SetReadDeadline(time.Now().Add(vl.Server.ReadTimeout))
+	}
+
 	for {
 		n, err := c.Read(crb.buf)
 		if err != nil {
@@ -97,6 +107,8 @@ func (vl *VirtualListener) conn(c net.Conn) {
 		c.Close()
 		return
 	}
+
+	c.SetReadDeadline(time.Time{})
 
 	select {
 	case <-vl.closeChan:

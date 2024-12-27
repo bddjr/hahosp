@@ -49,8 +49,7 @@ func Serve(l net.Listener, srv *http.Server, certFile string, keyFile string) er
 		}
 	}
 
-	vl := NewVisualListener(l, config)
-	return srv.Serve(vl)
+	return srv.Serve(NewVisualListener(l, config, srv))
 }
 
 func IsShuttingDown(srv *http.Server) bool {
