@@ -1,7 +1,6 @@
 package hahosp
 
 import (
-	"context"
 	"crypto/tls"
 	"net"
 	"unsafe"
@@ -12,10 +11,7 @@ type VirtualListener struct {
 	TLSConf *tls.Config
 
 	acceptChan chan net.Conn
-	context    context.Context
-	cancel     context.CancelFunc
-	closed     bool
-	started    bool
+	closeChan  chan struct{}
 }
 
 func NewVisualListener(l net.Listener, config *tls.Config) *VirtualListener {
@@ -25,24 +21,16 @@ func NewVisualListener(l net.Listener, config *tls.Config) *VirtualListener {
 	}
 }
 
-func (vl *VirtualListener) Close() error {
-	vl.closed = true
-	return vl.Listener.Close()
-}
-
 func (vl *VirtualListener) Accept() (net.Conn, error) {
-	if vl.closed {
-		return nil, net.ErrClosed
-	}
-	if !vl.started {
-		vl.started = true
-		vl.context, vl.cancel = context.WithCancel(context.TODO())
+	if vl.acceptChan == nil {
+		// init
 		vl.acceptChan = make(chan net.Conn)
+		vl.closeChan = make(chan struct{})
 		go vl.serve()
 	}
 
 	select {
-	case <-vl.context.Done():
+	case <-vl.closeChan:
 		return nil, net.ErrClosed
 	case c := <-vl.acceptChan:
 		return c, nil
@@ -54,8 +42,12 @@ func (vl *VirtualListener) serve() {
 		c, err := vl.Listener.Accept()
 		if err != nil {
 			// An error is returned when the listener is closed only.
-			vl.closed = true
-			vl.cancel()
+			select {
+			case <-vl.closeChan:
+				// closed
+			default:
+				close(vl.closeChan)
+			}
 			return
 		}
 		go vl.conn(c)
@@ -107,7 +99,7 @@ func (vl *VirtualListener) conn(c net.Conn) {
 	}
 
 	select {
-	case <-vl.context.Done():
+	case <-vl.closeChan:
 	case vl.acceptChan <- c:
 	}
 }
