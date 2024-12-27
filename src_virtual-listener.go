@@ -11,7 +11,6 @@ type VirtualListener struct {
 	net.Listener
 	TLSConf *tls.Config
 
-	nextChan   chan struct{}
 	acceptChan chan net.Conn
 	context    context.Context
 	cancel     context.CancelFunc
@@ -38,12 +37,10 @@ func (vl *VirtualListener) Accept() (net.Conn, error) {
 	if !vl.started {
 		vl.started = true
 		vl.context, vl.cancel = context.WithCancel(context.TODO())
-		vl.nextChan = make(chan struct{}, 1)
-		vl.acceptChan = make(chan net.Conn, 1)
+		vl.acceptChan = make(chan net.Conn)
 		go vl.serve()
 	}
 
-	vl.nextChan <- struct{}{}
 	select {
 	case <-vl.context.Done():
 		return nil, net.ErrClosed
@@ -56,6 +53,7 @@ func (vl *VirtualListener) serve() {
 	for {
 		c, err := vl.Listener.Accept()
 		if err != nil {
+			// An error is returned when the listener is closed only.
 			vl.closed = true
 			vl.cancel()
 			return
@@ -110,8 +108,6 @@ func (vl *VirtualListener) conn(c net.Conn) {
 
 	select {
 	case <-vl.context.Done():
-		//
-	case <-vl.nextChan:
-		vl.acceptChan <- c
+	case vl.acceptChan <- c:
 	}
 }
