@@ -2,8 +2,8 @@
 
 Listen HTTPS and HTTP on same port.
 
-> [!IMPORTANT]
-> If you only need redirect to HTTPS, please use https://github.com/bddjr/hlfhr
+> [!NOTE]
+> If you only need redirect to HTTPS, you can use https://github.com/bddjr/hlfhr
 
 ---
 
@@ -18,6 +18,7 @@ go get github.com/bddjr/hahosp
 ## Example
 
 ```go
+// test
 srv := &http.Server{
     Addr:    ":5688"
     Handler: http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
@@ -31,6 +32,30 @@ srv := &http.Server{
 
 err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
 ```
+
+```go
+// redirect
+srv := &http.Server{
+    Addr:    ":5688"
+    Handler: http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+        if r.TLS == nil {
+            // HTTP
+            url := "https://" + r.Host + r.URL.Path
+            if r.URL.ForceQuery || r.URL.RawQuery != "" {
+                url += "?" + r.URL.RawQuery
+            }
+            w.Header().Set("Location", url)
+            w.WriteHeader(302)
+            return
+        }
+        // HTTPS
+        io.WriteString(w, "ok\n")
+    }),
+}
+
+err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
+```
+
 
 ---
 
