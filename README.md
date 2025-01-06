@@ -13,40 +13,15 @@ go get github.com/bddjr/hahosp
 ```
 
 ```go
-// test
 srv := &http.Server{
     Addr:    ":5688"
-    Handler: http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-        if r.TLS != nil {
-            io.WriteString(w, "You'r using HTTPS\n")
-        } else {
-            io.WriteString(w, "You'r using HTTP\n")
-        }
-    }),
-}
-
-// Use hahosp.ListenAndServe
-err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
-```
-
-```go
-// redirect
-srv := &http.Server{
-    Addr:    ":5688"
-    Handler: http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-        if r.TLS == nil {
-            // HTTP
-            url := "https://" + r.Host + r.URL.Path
-            if r.URL.ForceQuery || r.URL.RawQuery != "" {
-                url += "?" + r.URL.RawQuery
-            }
-            w.Header().Set("Location", url)
-            w.WriteHeader(302)
-            return
-        }
-        // HTTPS
-        io.WriteString(w, "ok\n")
-    }),
+    // Use hahosp.HandlerSelector
+    Handler: &hahosp.HandlerSelector{
+        HTTPS: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            io.WriteString(w, "ok\n")
+        }),
+        HTTP: nil, // If nil, redirect to HTTPS.
+    },
 }
 
 // Use hahosp.ListenAndServe
