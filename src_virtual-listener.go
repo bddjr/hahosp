@@ -85,7 +85,10 @@ func (vl *VirtualListener) conn(c net.Conn) {
 	}
 
 	switch crb.buf[0] {
-	case 22: // recordTypeHandshake
+	case 20, // recordTypeChangeCipherSpec
+		21, // recordTypeAlert
+		22, // recordTypeHandshake
+		23: // recordTypeApplicationData
 		// TLS
 		tc := tls.Server(crb, vl.TLSConf)
 		c = tc
