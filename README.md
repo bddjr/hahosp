@@ -4,8 +4,6 @@ Listen HTTPS and HTTP on same port.
 
 > If you only need redirect to HTTPS, recommended use [hlfhr](https://github.com/bddjr/hlfhr).
 
----
-
 ## Setup
 
 ```
