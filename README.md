@@ -2,20 +2,15 @@
 
 Listen HTTPS and HTTP on same port.
 
-> [!NOTE]
-> If you only need redirect to HTTPS, you can use https://github.com/bddjr/hlfhr
+> If you only need redirect to HTTPS, recommended use [hlfhr](https://github.com/bddjr/hlfhr).
 
 ---
 
-## Get
+## Setup
 
 ```
 go get github.com/bddjr/hahosp
 ```
-
----
-
-## Example
 
 ```go
 // test
@@ -30,6 +25,7 @@ srv := &http.Server{
     }),
 }
 
+// Use hahosp.ListenAndServe
 err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
 ```
 
@@ -53,6 +49,7 @@ srv := &http.Server{
     }),
 }
 
+// Use hahosp.ListenAndServe
 err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
 ```
 
@@ -69,11 +66,12 @@ flowchart TD
     Serve(["✅ serve..."])
 	LooksLike{{"Read first byte looks like ?"}}
 	Close(["❌ Close."])
-    SentToVA(["✅📤Send to Virtual accept"])
+    HijackingNetConn("Hijacking net.Conn")
+    SentToVA(["📤Send to Virtual accept"])
     NewTLS("New tls.Conn")
 
     VirtualListener -- "http.Server Serve" --> VirtualAccept -- "async" --> Serve
-    VirtualListener -- "async hahosp Serve" --> Accept -- "async"  --> LooksLike
+    VirtualListener -- "async hahosp Serve" --> Accept -- "async"  --> HijackingNetConn --> LooksLike
     LooksLike -- "❓Unknown" --> Close
     LooksLike -- "📄HTTP" --> SentToVA
     LooksLike -- "🔐TLS" --> NewTLS --> SentToVA
@@ -86,6 +84,7 @@ flowchart TD
 ```
 git clone https://github.com/bddjr/hahosp
 cd hahosp
+chmod +x run.sh
 ./run.sh
 ```
 
