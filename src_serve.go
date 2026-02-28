@@ -4,13 +4,12 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"reflect"
-	"sync/atomic"
-	"unsafe"
+
+	hahosp_utils "github.com/bddjr/hahosp/utils"
 )
 
-func ListenAndServe(srv *http.Server, certFile string, keyFile string) error {
-	if IsShuttingDown(srv) {
+func ListenAndServeTLS(srv *http.Server, certFile string, keyFile string) error {
+	if hahosp_utils.IsShuttingDown(srv) {
 		return http.ErrServerClosed
 	}
 	addr := srv.Addr
@@ -25,6 +24,11 @@ func ListenAndServe(srv *http.Server, certFile string, keyFile string) error {
 	defer l.Close()
 
 	return Serve(l, srv, certFile, keyFile)
+}
+
+// Deprecated: Move to [ListenAndServeTLS]
+func ListenAndServe(srv *http.Server, certFile string, keyFile string) error {
+	return ListenAndServeTLS(srv, certFile, keyFile)
 }
 
 func Serve(l net.Listener, srv *http.Server, certFile string, keyFile string) error {
@@ -50,9 +54,4 @@ func Serve(l net.Listener, srv *http.Server, certFile string, keyFile string) er
 	}
 
 	return srv.Serve(NewVisualListener(l, config, srv))
-}
-
-func IsShuttingDown(srv *http.Server) bool {
-	inShutdown := (*atomic.Bool)(unsafe.Pointer(reflect.ValueOf(srv).Elem().FieldByName("inShutdown").UnsafeAddr()))
-	return inShutdown.Load()
 }

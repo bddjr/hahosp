@@ -1,19 +1,19 @@
-# HTTPS And HTTP On Same Port
+# HTTP And HTTPS On Same Port
 
-Listen HTTPS and HTTP on same port.
+🌐 Listen HTTP and HTTPS on the **same port** using Golang.
 
-> If you only need redirect to HTTPS, recommended use [hlfhr](https://github.com/bddjr/hlfhr).
+> If you only need HTTP redirect to HTTPS, recommended use [github.com/bddjr/hlfhr](https://github.com/bddjr/hlfhr)
 
 ## Setup
 
 ```
-go get github.com/bddjr/hahosp
+go get -u github.com/bddjr/hahosp@latest
 ```
 
 ```go
 srv := &http.Server{
     Addr:    ":5688"
-    // Use hahosp.HandlerSelector
+    // Use [hahosp.HandlerSelector]
     Handler: &hahosp.HandlerSelector{
         HTTPS: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             io.WriteString(w, "ok\n")
@@ -22,10 +22,24 @@ srv := &http.Server{
     },
 }
 
-// Use hahosp.ListenAndServe
-err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
+// Use [hahosp.ListenAndServeTLS]
+err := hahosp.ListenAndServeTLS(srv, "localhost.crt", "localhost.key")
 ```
 
+---
+
+## VS
+
+`github.com/bddjr/hahosp` VS [`github.com/bddjr/hlfhr`](https://github.com/bddjr/hlfhr)
+
+| Feature | hahosp | hlfhr |
+| ---- | ---- | ---- |
+| WebSocket on HTTP (not HTTPS) | ✅ | ❌ Unsupport `http.Hijacker` |
+| Keep alive on HTTP (not HTTPS) | ✅ | ❌ |
+| Without modify type `http.Server` | ✅ | ❌ Need modity to `hlfhr.Server` |
+| Redirect to HTTPS without modify `Server.Handler` | ❌ Need modify to `hahosp.HandlerSelector` | ✅ |
+| Listen 80 redirect to 443 | ❌ | ✅ Need config |
+| Without modify `Server.ListenAndServeTLS` | ❌ Need modify to `hahosp.ListenAndServe` | ✅ |
 
 ---
 
@@ -49,26 +63,3 @@ flowchart TD
     LooksLike -- "📄HTTP" --> SentToVA
     LooksLike -- "🔐TLS" --> NewTLS --> SentToVA
 ```
-
----
-
-## Test
-
-```
-git clone https://github.com/bddjr/hahosp
-cd hahosp
-chmod +x run.sh
-./run.sh
-```
-
----
-
-## Reference
-
-https://github.com/bddjr/hlfhr
-
----
-
-## License
-
-[BSD-3-clause license](LICENSE.txt)

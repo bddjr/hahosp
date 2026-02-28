@@ -1,6 +1,10 @@
 package hahosp
 
-import "net/http"
+import (
+	"net/http"
+
+	hahosp_utils "github.com/bddjr/hahosp/utils"
+)
 
 type HandlerSelector struct {
 	// Handles on HTTPS.
@@ -11,20 +15,20 @@ type HandlerSelector struct {
 	HTTP http.Handler
 }
 
-func (this *HandlerSelector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (hs *HandlerSelector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.TLS != nil {
 		// HTTPS
-		if this.HTTPS != nil {
-			this.HTTPS.ServeHTTP(w, r)
+		if h := hs.HTTPS; h != nil {
+			h.ServeHTTP(w, r)
 		} else {
 			http.NotFound(w, r)
 		}
 	} else {
 		// HTTP
-		if this.HTTP != nil {
-			this.HTTP.ServeHTTP(w, r)
+		if h := hs.HTTP; h != nil {
+			h.ServeHTTP(w, r)
 		} else {
-			RedirectToHttps(w, r, 302)
+			hahosp_utils.RedirectToHttps_ForceSamePort(w, r, 307)
 		}
 	}
 }

@@ -28,13 +28,12 @@ func main() {
 	}
 
 	fmt.Println()
-	fmt.Println("  curl -vkL http://localhost" + srv.Addr)
-	fmt.Println("  curl -vkL https://localhost" + srv.Addr)
-	fmt.Println("  telnet localhost", srv.Addr[1:])
+	fmt.Println("  http://localhost" + srv.Addr)
+	fmt.Println("  https://localhost" + srv.Addr)
 	fmt.Println()
 
 	go func() {
-		err := hahosp.ListenAndServe(srv, "localhost.crt", "localhost.key")
+		err := hahosp.ListenAndServeTLS(srv, "localhost.crt", "localhost.key")
 		fmt.Println(err)
 	}()
 

@@ -1,6 +1,7 @@
-test/*.exe
-test/main
-test/test
-simplehlfhr/test/*.exe
-simplehlfhr/test/main
-simplehlfhr/test/test
+.DS_Store
+
+testdata/*.exe
+testdata/main
+testdata/testdata
+testdata/tester
+.go-pkg
