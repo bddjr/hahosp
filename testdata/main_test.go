@@ -129,3 +129,30 @@ func Test(t *testing.T) {
 	}
 	println()
 }
+
+func TestHandlerSelector(t *testing.T) {
+	println("TestHandlerSelector")
+	var w http.ResponseWriter
+	r := &http.Request{}
+	testStatus := 0
+	var h http.Handler = &hahosp.HandlerSelector{
+		HTTPS: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			testStatus = 1
+		}),
+		HTTP: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			testStatus = 2
+		}),
+	}
+
+	r.TLS = &tls.ConnectionState{}
+	h.ServeHTTP(w, r)
+	if testStatus != 1 {
+		panic("failed 1")
+	}
+
+	r.TLS = nil
+	h.ServeHTTP(w, r)
+	if testStatus != 2 {
+		panic("failed 2")
+	}
+}
