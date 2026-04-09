@@ -28,7 +28,7 @@ err := hahosp.ListenAndServeTLS(srv, "localhost.crt", "localhost.key")
 
 ---
 
-## VS
+## Versus
 
 `github.com/bddjr/hahosp` VS [`github.com/bddjr/hlfhr`](https://github.com/bddjr/hlfhr)
 
