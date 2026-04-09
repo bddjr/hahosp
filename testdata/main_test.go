@@ -70,7 +70,7 @@ func request(serverAddr string) {
 }
 
 func Test(t *testing.T) {
-	const serverAddr = "127.0.0.1:5688"
+	const serverAddr = "127.0.0.1:56756"
 	srv := &http.Server{
 		Addr: serverAddr,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

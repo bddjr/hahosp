@@ -15,7 +15,7 @@ import (
 
 func main() {
 	srv := &http.Server{
-		Addr: ":5688",
+		Addr: ":56756",
 		Handler: &hahosp.HandlerSelector{
 			HTTPS: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				io.WriteString(w, "You'r using HTTPS\n")
