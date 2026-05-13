@@ -5,11 +5,11 @@ import (
 	"net"
 	"net/http"
 
-	hahosp_utils "github.com/bddjr/hahosp/utils"
+	"github.com/bddjr/shuttingdown"
 )
 
 func ListenAndServeTLS(srv *http.Server, certFile string, keyFile string) error {
-	if hahosp_utils.IsShuttingDown(srv) {
+	if shuttingdown.IsShuttingDown(srv) {
 		return http.ErrServerClosed
 	}
 	addr := srv.Addr

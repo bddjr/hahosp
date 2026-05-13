@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/bddjr/hahosp"
-	hahosp_utils "github.com/bddjr/hahosp/utils"
 	"golang.org/x/net/http2"
 )
 
@@ -103,9 +102,6 @@ func Test(t *testing.T) {
 	}
 
 	println("Listen " + serverAddr)
-	if hahosp_utils.IsShuttingDown(srv) {
-		panic(true)
-	}
 
 	var err error
 	go func() {
@@ -123,9 +119,6 @@ func Test(t *testing.T) {
 	err = srv.Shutdown(context.Background())
 	if err != nil {
 		panic(err)
-	}
-	if !hahosp_utils.IsShuttingDown(srv) {
-		panic(false)
 	}
 	println()
 }

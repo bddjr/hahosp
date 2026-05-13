@@ -9,4 +9,7 @@ require (
 	golang.org/x/net v0.35.0
 )
 
-require golang.org/x/text v0.22.0 // indirect
+require (
+	github.com/bddjr/shuttingdown v0.1.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
+)
