@@ -79,14 +79,14 @@ func Test(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			enc := json.NewEncoder(w)
 			enc.SetEscapeHTML(false)
-			var TLS map[string]any
+			var TLS map[string]interface{}
 			if r.TLS != nil {
-				TLS = map[string]any{
+				TLS = map[string]interface{}{
 					"TLS_Version":    tlsVersionName(r.TLS.Version),
 					"TLS_ServerName": r.TLS.ServerName,
 				}
 			}
-			m := map[string]any{
+			m := map[string]interface{}{
 				"Method": r.Method,
 				"Proto":  r.Proto,
 				"TLS":    TLS,
