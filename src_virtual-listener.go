@@ -84,28 +84,16 @@ func (vl *VirtualListener) conn(c net.Conn) {
 		}
 	}
 
-	switch crb.buf[0] {
-	case 20, // recordTypeChangeCipherSpec
-		21, // recordTypeAlert
-		22, // recordTypeHandshake
-		23: // recordTypeApplicationData
+	if crb.buf[0] <= 23 && crb.buf[0] >= 20 {
 		// TLS
 		tc := tls.Server(crb, vl.TLSConf)
 		c = tc
 		crb.higher = (*conn)(unsafe.Pointer(tc))
-
-	case 'G', // GET
-		'H', // HEAD
-		'P', // POST PUT PATCH
-		'O', // OPTIONS
-		'D', // DELETE
-		'C', // CONNECT
-		'T': // TRACE
+	} else if crb.buf[0] >= 'A' && crb.buf[0] <= 'Z' {
 		// HTTP
 		crb.higher = &conn{crb}
 		c = crb.higher
-
-	default:
+	} else {
 		// unknown
 		c.Close()
 		return
