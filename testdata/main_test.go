@@ -53,18 +53,40 @@ func request(serverAddr string) {
 	for _, scheme := range []string{"http", "https"} {
 		url := scheme + "://" + serverAddr + uri
 		println(url)
-		resp, err := client.Get(url)
-		if err != nil {
-			panic(err)
+		println()
+		for _, method := range []string{
+			"GET",
+			"HEAD",
+			"POST",
+			"PUT",
+			"DELETE",
+			"CONNECT",
+			"OPTIONS",
+			"TRACE",
+			"PATCH",
+			"QUERY",
+		} {
+			println(method)
+			req, err := http.NewRequest(method, url, nil)
+			if err != nil {
+				panic(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			if scheme == "https" && resp.ProtoMajor != 2 {
+				panic("Response does not using h2 protocol!")
+			}
+			if method != "HEAD" {
+				respBody, err := io.ReadAll(resp.Body)
+				if err != nil {
+					panic(err)
+				}
+				print(string(respBody))
+			}
+			println()
 		}
-		if scheme == "https" && resp.ProtoMajor != 2 {
-			panic("Response does not using h2 protocol!")
-		}
-		respBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		print(string(respBody))
 	}
 }
 
