@@ -2,8 +2,10 @@ package hahosp
 
 import (
 	"crypto/tls"
+	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -15,6 +17,7 @@ type VirtualListener struct {
 
 	acceptChan chan net.Conn
 	closeChan  chan struct{}
+	initOnce   sync.Once
 }
 
 func NewVisualListener(l net.Listener, config *tls.Config, Server *http.Server) *VirtualListener {
@@ -26,12 +29,11 @@ func NewVisualListener(l net.Listener, config *tls.Config, Server *http.Server) 
 }
 
 func (vl *VirtualListener) Accept() (net.Conn, error) {
-	if vl.acceptChan == nil {
-		// init
+	vl.initOnce.Do(func() {
 		vl.acceptChan = make(chan net.Conn)
 		vl.closeChan = make(chan struct{})
 		go vl.serve()
-	}
+	})
 
 	select {
 	case <-vl.closeChan:
@@ -42,18 +44,27 @@ func (vl *VirtualListener) Accept() (net.Conn, error) {
 }
 
 func (vl *VirtualListener) serve() {
+	var tempDelay time.Duration // how long to sleep on accept failure
 	for {
 		c, err := vl.Listener.Accept()
 		if err != nil {
-			// An error is returned when the listener is closed only.
-			select {
-			case <-vl.closeChan:
-				// closed
-			default:
-				close(vl.closeChan)
+			if ne, ok := err.(net.Error); ok && ne.Temporary() {
+				if tempDelay == 0 {
+					tempDelay = 5 * time.Millisecond
+				} else {
+					tempDelay *= 2
+				}
+				if max := 1 * time.Second; tempDelay > max {
+					tempDelay = max
+				}
+				vl.logf("hahosp: Accept error: %v; retrying in %v", err, tempDelay)
+				time.Sleep(tempDelay)
+				continue
 			}
+			close(vl.closeChan)
 			return
 		}
+		tempDelay = 0
 		go vl.conn(c)
 	}
 }
@@ -105,6 +116,16 @@ func (vl *VirtualListener) conn(c net.Conn) {
 
 	select {
 	case <-vl.closeChan:
+		c.Close()
 	case vl.acceptChan <- c:
+		//
+	}
+}
+
+func (vl *VirtualListener) logf(format string, args ...interface{}) {
+	if vl.Server.ErrorLog != nil {
+		vl.Server.ErrorLog.Printf(format, args...)
+	} else {
+		log.Printf(format, args...)
 	}
 }
