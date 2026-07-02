@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -48,6 +49,14 @@ func request(serverAddr string) {
 	}
 	defer client.CloseIdleConnections()
 
+	// Intentionally occupy a connection to test whether
+	// the server can handle requests in parallel.
+	c, err := net.Dial("tcp", serverAddr)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+
 	const uri = "/test?a=b&c=d"
 
 	for _, scheme := range []string{"http", "https"} {
@@ -87,6 +96,21 @@ func request(serverAddr string) {
 			}
 			println()
 		}
+	}
+
+	// unknown protocol
+	{
+		println("Test unknown protocol")
+		_, err = io.WriteString(c, "get")
+		if err != nil {
+			panic(err)
+		}
+		_, err = c.Read(make([]byte, 1))
+		if err == nil {
+			panic("not closed")
+		}
+		println(err.Error())
+		println()
 	}
 }
 
