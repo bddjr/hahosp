@@ -59,37 +59,39 @@ func (vl *VirtualListener) serve() {
 }
 
 func (vl *VirtualListener) conn(c net.Conn) {
-	crb := &connReadBuffer{
-		Conn: c,
-		buf:  make([]byte, 576),
-	}
-
 	if vl.Server.ReadHeaderTimeout != 0 {
 		c.SetReadDeadline(time.Now().Add(vl.Server.ReadHeaderTimeout))
 	} else if vl.Server.ReadTimeout != 0 {
 		c.SetReadDeadline(time.Now().Add(vl.Server.ReadTimeout))
 	}
 
+	buf := make([]byte, 576)
+
 	for {
-		n, err := c.Read(crb.buf)
+		n, err := c.Read(buf)
 		if err != nil {
 			c.Close()
 			return
 		}
 		if n != 0 {
-			if n != len(crb.buf) {
-				crb.buf = crb.buf[:n]
+			if n != len(buf) {
+				buf = buf[:n]
 			}
 			break
 		}
 	}
 
-	if crb.buf[0] <= 23 && crb.buf[0] >= 20 {
+	crb := &connReadBuffer{
+		Conn: c,
+		buf:  buf,
+	}
+
+	if buf[0] <= 23 && buf[0] >= 20 {
 		// TLS
 		tc := tls.Server(crb, vl.TLSConf)
 		c = tc
 		crb.higher = (*conn)(unsafe.Pointer(tc))
-	} else if crb.buf[0] >= 'A' && crb.buf[0] <= 'Z' {
+	} else if buf[0] >= 'A' && buf[0] <= 'Z' {
 		// HTTP
 		crb.higher = &conn{crb}
 		c = crb.higher
